@@ -9,7 +9,7 @@
 // /output):
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const botDir = process.env.MAKEFUN_BOT_DIR ?? "/bot";
@@ -23,5 +23,20 @@ try {
   console.error(
     `could not copy POST.json out of ${botDir}: ${(error as Error).message}`,
   );
+  process.exit(1);
+}
+
+// Validate the copied file: it must parse as JSON with a string `url`
+// field, so a broken POST.json fails loudly here instead of reaching the
+// gate as an unreadable entry.
+try {
+  const parsed = JSON.parse(
+    readFileSync(join(outputDir, "POST.json"), "utf8"),
+  );
+  if (typeof parsed?.url !== "string") {
+    throw new Error("POST.json has no string `url` field");
+  }
+} catch (error) {
+  console.error(`POST.json is not valid: ${(error as Error).message}`);
   process.exit(1);
 }
